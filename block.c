@@ -88,10 +88,11 @@ static void print_version() {
 }
 
 static void print_help() {
-    printf("Usage: %s [OPTION]...\n"
+    printf("Usage: %s [OPTION]... [FILE]...\n"
            "\n"
            "Groups non-whitespace input characters into blocks.\n"
            "The default block size is 5.\n"
+           "Takes input from FILEs, if given, or from stdin.\n"
            "\n"
            "    -b, --block-size SIZE   set the size of the blocks.\n"
            "    -h, --help      display this help and exit.\n"
