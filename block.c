@@ -15,13 +15,17 @@ static struct option options[] = {
     { NULL, 0, NULL, 0 }
 };
 
+static long block_size = 5;
+static long char_pos = 0;
+
 static void print_version();
 static void print_help();
+
+static void block_file(FILE *fp);
 
 int main(int argc, char **argv) {
     invoc_name = argv[0];
 
-    int block_size = 5;
     int c;
     while ((c = getopt_long(argc, argv, "b:hv", options, NULL)) != -1) {
         switch(c) {
@@ -46,15 +50,7 @@ int main(int argc, char **argv) {
     }
 
     if ( optind == argc ) {
-        int i = 0;
-        while ( ( c = getchar() ) != EOF ) {
-            if ( !isprint(c) || isspace(c) )
-                continue;
-            if ( i && i % block_size == 0 )
-                printf(" ");
-            printf("%c", c);
-            i++;
-        }
+        block_file(stdin);
     } else {
         for (int n = optind; n < argc; n++) {
             FILE *fp = fopen(argv[n], "r");
@@ -63,21 +59,25 @@ int main(int argc, char **argv) {
                 continue;
             }
 
-            int i = 0;
-            while ( ( c = fgetc(fp) ) != EOF ) {
-                if ( !isprint(c) || isspace(c) )
-                    continue;
-                if ( i && i % block_size == 0 )
-                    printf(" ");
-                printf("%c", c);
-                i++;
-            }
+            block_file(fp);
 
             fclose(fp);
         }
     }
 
     return 0;
+}
+
+static void block_file(FILE *fp) {
+    int c;
+    while ( ( c = fgetc(fp) ) != EOF ) {
+        if ( !isprint(c) || isspace(c) )
+            continue;
+        if ( char_pos && (char_pos % block_size == 0) )
+            printf(" ");
+        printf("%c", c);
+        char_pos++;
+    }
 }
 
 static void print_version() {
