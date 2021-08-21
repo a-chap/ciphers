@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 #include <getopt.h>
 
 static char *prog_name = "shift";
@@ -10,6 +11,7 @@ static char *author = "a-chap";
 
 static struct option options[] = {
     { "shift", required_argument, NULL, 's'},
+    { "keyword", required_argument, NULL, 'k'},
     { "rot13", no_argument, NULL, 'r'},
     { "decrypt", no_argument, NULL, 'd'},
     { "help", no_argument, NULL, 'h'},
@@ -17,23 +19,42 @@ static struct option options[] = {
     { NULL, 0, NULL, 0 }
 };
 
-static long shift = 3;
+static int shift = 3;
+static int *keyword = NULL;
+static int keyword_length = 0;
 
 static void print_version();
 static void print_help();
 
+static int valid_keyword(char *keyword);
 static void encrypt(FILE *fp, int decrypt);
 
 int main(int argc, char **argv) {
     invoc_name = argv[0];
 
-    int c, decrypt = 0;
-    while ((c = getopt_long(argc, argv, "s:rdhv", options, NULL)) != -1) {
+    int c, decrypt = 0, tmp_shift;
+    while ((c = getopt_long(argc, argv, "s:k:rdhv", options, NULL)) != -1) {
         switch(c) {
             case 's':
-                shift = strtol(optarg, NULL, 10);
-                if ( shift < 0 || shift > 26 )
-                    shift = 3;
+                tmp_shift = atoi(optarg);
+                if ( tmp_shift >= 0 && tmp_shift <= 26 )
+                    shift = tmp_shift;
+                break;
+            case 'k':
+                if ( keyword != NULL ) {
+                    fprintf(stderr, "Only one keyword needed.\n");
+                    exit(EXIT_FAILURE);
+                } else if ( ! valid_keyword(optarg) ) {
+                    fprintf(stderr, "Keyword must only be letters.\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                keyword_length = strlen(optarg);
+                keyword = calloc(keyword_length, sizeof(int));
+
+                for (int i = 0; i < keyword_length; i++)
+                    keyword[i] = optarg[i] - 'a';
+
                 break;
             case 'r':
                 shift = 13;
@@ -75,11 +96,26 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+static int valid_keyword(char *keyword) {
+    if ( keyword == NULL || strlen(keyword) == 0 )
+        return 0;
+
+    for (int i = 0; i < strlen(keyword); i++)
+        if ( !isalpha(keyword[i]) )
+            return 0;
+
+    return 1;
+}
+
 static void encrypt(FILE *fp, int decrypt) {
-    int c;
+    int c, i = 0;
     int first_letter;
     while ( ( c = fgetc(fp) ) != EOF ) {
         if ( isalpha(c) ) {
+            if ( keyword != NULL ) {
+                shift = keyword[i];
+                i = (i + 1) % keyword_length;
+            }
             first_letter = islower(c)?'a':'A';
             c = (c - first_letter + (decrypt?26-shift:shift)) % 26
                 + first_letter;
@@ -102,6 +138,7 @@ static void print_help() {
            "Defaults to a shift of 3.\n"
            "\n"
            "    -s, --shift NUMBER  set how many letters to shift the plain text by.\n"
+           "    -k, --keyword WORD  set the keyword to use a Vigenere cipher.\n"
            "    -r, --rot13     use a shift of 13 letters.\n"
            "    -d, --decrypt   decrypt cipher text.\n"
            "    -h, --help      display this help and exit.\n"
