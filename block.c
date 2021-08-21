@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <getopt.h>
 
 static char *prog_name = "block";
@@ -44,10 +45,14 @@ int main(int argc, char **argv) {
         }
     }
 
-    for (int i = 0; (c = getchar() ) != EOF; i++) {
+    int i = 0;
+    while ( ( c = getchar() ) != EOF ) {
+        if ( !isprint(c) )
+            continue;
         if ( i && i % block_size == 0 )
             printf(" ");
         printf("%c", c);
+        i++;
     }
 
     return 0;
