@@ -10,6 +10,7 @@ static char *author = "a-chap";
 
 static struct option options[] = {
     { "shift", required_argument, NULL, 's'},
+    { "rot13", no_argument, NULL, 'r'},
     { "decrypt", no_argument, NULL, 'd'},
     { "help", no_argument, NULL, 'h'},
     { "version", no_argument, NULL, 'v'},
@@ -27,12 +28,15 @@ int main(int argc, char **argv) {
     invoc_name = argv[0];
 
     int c, decrypt = 0;
-    while ((c = getopt_long(argc, argv, "s:dhv", options, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "s:rdhv", options, NULL)) != -1) {
         switch(c) {
             case 's':
                 shift = strtol(optarg, NULL, 10);
                 if ( shift < 0 || shift > 26 )
                     shift = 3;
+                break;
+            case 'r':
+                shift = 13;
                 break;
             case 'd':
                 decrypt = 1;
@@ -68,8 +72,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    printf("%d\n", -1 % 26);
-
     return 0;
 }
 
@@ -100,6 +102,7 @@ static void print_help() {
            "Defaults to a shift of 3.\n"
            "\n"
            "    -s, --shift NUMBER  set how many letters to shift the plain text by.\n"
+           "    -r, --rot13     use a shift of 13 letters.\n"
            "    -d, --decrypt   decrypt cipher text.\n"
            "    -h, --help      display this help and exit.\n"
            "    -v, --version   display version information and exit.\n",
