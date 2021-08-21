@@ -45,14 +45,36 @@ int main(int argc, char **argv) {
         }
     }
 
-    int i = 0;
-    while ( ( c = getchar() ) != EOF ) {
-        if ( !isprint(c) )
-            continue;
-        if ( i && i % block_size == 0 )
-            printf(" ");
-        printf("%c", c);
-        i++;
+    if ( optind == argc ) {
+        int i = 0;
+        while ( ( c = getchar() ) != EOF ) {
+            if ( !isprint(c) || isspace(c) )
+                continue;
+            if ( i && i % block_size == 0 )
+                printf(" ");
+            printf("%c", c);
+            i++;
+        }
+    } else {
+        for (int n = optind; n < argc; n++) {
+            FILE *fp = fopen(argv[n], "r");
+            if ( fp == NULL ) {
+                perror("Cannot open file");
+                continue;
+            }
+
+            int i = 0;
+            while ( ( c = fgetc(fp) ) != EOF ) {
+                if ( !isprint(c) || isspace(c) )
+                    continue;
+                if ( i && i % block_size == 0 )
+                    printf(" ");
+                printf("%c", c);
+                i++;
+            }
+
+            fclose(fp);
+        }
     }
 
     return 0;
