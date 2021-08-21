@@ -15,7 +15,7 @@ static struct option options[] = {
     { NULL, 0, NULL, 0 }
 };
 
-static long block_size = 5;
+static int block_size = 5;
 static long char_pos = 0;
 
 static void print_version();
@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
     while ((c = getopt_long(argc, argv, "b:hv", options, NULL)) != -1) {
         switch(c) {
             case 'b':
-                block_size = strtol(optarg, NULL, 10);
+                block_size = atoi(optarg);
                 if ( block_size <= 0 )
                     block_size = 5;
                 break;
