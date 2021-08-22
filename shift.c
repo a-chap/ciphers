@@ -23,13 +23,20 @@ static struct option options[] = {
 static int shift = 3;
 static int *keyword = NULL;
 static int keyword_length = 0;
-static int progress = 0;
+static int progress_keyword = 0;
 
 static void print_version();
 static void print_help();
 
 static int valid_keyword(char *keyword);
 static void encrypt(FILE *fp, int decrypt);
+
+static inline int is_simple_shift_cipher() {
+    return keyword == NULL;
+}
+static inline int is_vigenere_cipher() {
+    return keyword != NULL;
+}
 
 int main(int argc, char **argv) {
     invoc_name = argv[0];
@@ -59,7 +66,7 @@ int main(int argc, char **argv) {
 
                 break;
             case 'p':
-                progress = 1;
+                progress_keyword = 1;
                 break;
             case 'r':
                 shift = 13;
@@ -117,10 +124,10 @@ static void encrypt(FILE *fp, int decrypt) {
     int first_letter;
     while ( ( c = fgetc(fp) ) != EOF ) {
         if ( isalpha(c) ) {
-            if ( keyword != NULL ) {
+            if ( is_vigenere_cipher() ) {
                 shift = keyword[i];
 
-                if ( progress ) {
+                if ( progress_keyword ) {
                     keyword[i]++;
                     keyword[i] %= 26;
                 }
@@ -128,13 +135,19 @@ static void encrypt(FILE *fp, int decrypt) {
                 i = (i + 1) % keyword_length;
             }
 
+            /*
+             * Retain first letter so I know whether
+             * the letter should come out as upper
+             * or lower case.
+             */
             first_letter = islower(c)?'a':'A';
             c = (c - first_letter + (decrypt?26-shift:shift)) % 26
                 + first_letter;
 
-            if ( progress && keyword == NULL )
+            if ( progress_keyword && is_simple_shift_cipher() )
                 shift = (shift + 1) % 26;
         }
+
         printf("%c", c);
     }
 }
