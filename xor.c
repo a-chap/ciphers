@@ -9,7 +9,6 @@ static char *invoc_name = NULL;
 static char *author = "a-chap";
 
 static struct option options[] = {
-    { "keyword", required_argument, NULL, 'k'},
     { "help", no_argument, NULL, 'h'},
     { "version", no_argument, NULL, 'v'},
     { NULL, 0, NULL, 0 }
@@ -27,19 +26,8 @@ int main(int argc, char **argv) {
     invoc_name = argv[0];
 
     int c;
-    while ((c = getopt_long(argc, argv, "k:hv", options, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "hv", options, NULL)) != -1) {
         switch(c) {
-            case 'k':
-                if ( keyword != NULL ) {
-                    fprintf(stderr, "Only one keyword needed.\n");
-                    exit(EXIT_FAILURE);
-                } else if ( strlen(optarg) == 0 ) {
-                    fprintf(stderr, "Keyword cannot be empty string.\n");
-                    exit(EXIT_FAILURE);
-                }
-
-                keyword = optarg;
-                break;
             case 'h':
                 print_help();
                 exit(EXIT_SUCCESS);
@@ -55,16 +43,25 @@ int main(int argc, char **argv) {
         }
     }
 
-    if ( keyword == NULL ) {
-        fprintf(stderr, "Keyword is needed.\n");
+    if ( optind == argc ) {
+        fprintf(stderr, "%s: Keyword missing.\n"
+                        "Try '%s --help' for more information.\n"
+                        , invoc_name, invoc_name);
+        exit(EXIT_FAILURE);
+    } else if ( strlen(argv[optind]) == 0 ) {
+        fprintf(stderr, "%s: Keyword cannot be an empty string.\n"
+                        "Try '%s --help' for more information.\n"
+                        , invoc_name, invoc_name);
         exit(EXIT_FAILURE);
     }
 
-    if ( optind == argc ) {
+    keyword = argv[optind];
+
+    if ( optind + 1 == argc ) {
         encrypt(stdin);
     } else {
-        for (int n = optind; n < argc; n++) {
-            FILE *fp = fopen(argv[n], "r");
+        for (int i = optind + 1; i < argc; i++) {
+            FILE *fp = fopen(argv[i], "r");
             if ( fp == NULL ) {
                 perror("Cannot open file");
                 continue;
@@ -101,13 +98,14 @@ static void print_version() {
 }
 
 static void print_help() {
-    printf("Usage: %s [OPTION]... FILE...\n"
+    printf("Usage: %s KEYWORD [FILE]...\n"
+           "   or: %s [OPTION]\n"
            "\n"
-           "Encrypts stdin or FILEs using an xor cipher.\n"
-           "To decrypt, re-encrypt using the same keyword.\n"
+           "Encrypts stdin or FILEs using an xor cipher using\n"
+           "the given KEYWORD. To decrypt, re-encrypt using\n"
+           "the same keyword.\n"
            "\n"
-           "    -k, --keyword WORD  set the keyword to use a Vigenere cipher.\n"
            "    -h, --help      display this help and exit.\n"
            "    -v, --version   display version information and exit.\n",
-           invoc_name);
+           invoc_name, invoc_name);
 }

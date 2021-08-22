@@ -51,10 +51,12 @@ int main(int argc, char **argv) {
                 break;
             case 'k':
                 if ( keyword != NULL ) {
-                    fprintf(stderr, "Only one keyword needed.\n");
+                    fprintf(stderr, "%s: Only one keyword needed.\n", invoc_name);
+                    fprintf(stderr, "Try '%s --help' for more information.\n", invoc_name);
                     exit(EXIT_FAILURE);
                 } else if ( ! valid_keyword(optarg) ) {
-                    fprintf(stderr, "Keyword must only be letters.\n");
+                    fprintf(stderr, "%s: Keyword must only contain letters.\n", invoc_name);
+                    fprintf(stderr, "Try '%s --help' for more information.\n", invoc_name);
                     exit(EXIT_FAILURE);
                 }
 
@@ -160,7 +162,7 @@ static void print_version() {
 }
 
 static void print_help() {
-    printf("Usage: %s [OPTION]... FILE...\n"
+    printf("Usage: %s [OPTION]... [FILE]...\n"
            "\n"
            "Encrypts given input or FILEs using a shift cipher.\n"
            "Defaults to a shift of 3.\n"
