@@ -12,6 +12,7 @@ static char *author = "a-chap";
 static struct option options[] = {
     { "shift", required_argument, NULL, 's'},
     { "keyword", required_argument, NULL, 'k'},
+    { "progress", no_argument, NULL, 'p'},
     { "rot13", no_argument, NULL, 'r'},
     { "decrypt", no_argument, NULL, 'd'},
     { "help", no_argument, NULL, 'h'},
@@ -22,6 +23,7 @@ static struct option options[] = {
 static int shift = 3;
 static int *keyword = NULL;
 static int keyword_length = 0;
+static int progress = 0;
 
 static void print_version();
 static void print_help();
@@ -33,7 +35,7 @@ int main(int argc, char **argv) {
     invoc_name = argv[0];
 
     int c, decrypt = 0, tmp_shift;
-    while ((c = getopt_long(argc, argv, "s:k:rdhv", options, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "s:k:prdhv", options, NULL)) != -1) {
         switch(c) {
             case 's':
                 tmp_shift = atoi(optarg);
@@ -55,6 +57,9 @@ int main(int argc, char **argv) {
                 for (int i = 0; i < keyword_length; i++)
                     keyword[i] = optarg[i] - 'a';
 
+                break;
+            case 'p':
+                progress = 1;
                 break;
             case 'r':
                 shift = 13;
@@ -114,11 +119,21 @@ static void encrypt(FILE *fp, int decrypt) {
         if ( isalpha(c) ) {
             if ( keyword != NULL ) {
                 shift = keyword[i];
+
+                if ( progress ) {
+                    keyword[i]++;
+                    keyword[i] %= 26;
+                }
+
                 i = (i + 1) % keyword_length;
             }
+
             first_letter = islower(c)?'a':'A';
             c = (c - first_letter + (decrypt?26-shift:shift)) % 26
                 + first_letter;
+
+            if ( progress && keyword == NULL )
+                shift = (shift + 1) % 26;
         }
         printf("%c", c);
     }
@@ -139,6 +154,12 @@ static void print_help() {
            "\n"
            "    -s, --shift NUMBER  set how many letters to shift the plain text by.\n"
            "    -k, --keyword WORD  set the keyword to use a Vigenere cipher.\n"
+           "    -p, --progress  progress the keyword as encryption continues.\n"
+           "                    ie keyword becomes lfzxpse for the second set.\n"
+           "                    of seven letters and then mgayqtf for the third\n"
+           "                    and so on. If using a simple shift, it will be\n"
+           "                    incremented after being used for a letter and\n"
+           "                    will wrap around to 0 when 26.\n"
            "    -r, --rot13     use a shift of 13 letters.\n"
            "    -d, --decrypt   decrypt cipher text.\n"
            "    -h, --help      display this help and exit.\n"
