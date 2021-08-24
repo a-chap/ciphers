@@ -26,6 +26,7 @@ static void print_help();
 static int valid_keyword(char *keyword);
 static void fill_in_playfair_grid(char *keyword);
 static void print_playfair_grid();
+static void encrypt_letters(char *letter_pair);
 static void encrypt(FILE *fp);
 
 int main(int argc, char **argv) {
@@ -155,20 +156,57 @@ static void print_playfair_grid() {
     printf("+---+---+---+---+---+\n");
 }
 
+static void encrypt_letters(char *letter_pair) {
+    int row_1, column_1,
+        row_2, column_2;
+    row_1 = row_2 = -1;
+
+    for (int x = 0; x < 5; x++) {
+        for (int y = 0; y < 5; y++) {
+            if ( playfair_grid[x][y] == letter_pair[0] ) {
+                row_1 = x;
+                column_1 = y;
+            }
+            if ( playfair_grid[x][y] == letter_pair[1] ) {
+                row_2 = x;
+                column_2 = y;
+            }
+
+            if (row_1 != -1 && row_2 != -1)
+                goto END_LOOP;
+        }
+    }
+    END_LOOP:; /* ; meant to be here. So I can break out of the inner loop */
+
+    if ( row_1 == row_2 ) {
+        /* Rule 3 --- shift to the right in the grid */
+        letter_pair[0] = playfair_grid[row_1][(column_1 + 1) % 5];
+        letter_pair[1] = playfair_grid[row_2][(column_2 + 1) % 5];
+    } else if ( column_1 == column_2 ) {
+        /* Rule 4 --- shift downwards in the grid */
+        letter_pair[0] = playfair_grid[(row_1 + 1) % 5][column_1];
+        letter_pair[1] = playfair_grid[(row_2 + 1) % 5][column_2];
+    } else {
+        /*
+         * Rule 5 --- swap to different corners of the rectangle
+         * that the letters are in
+         */
+        letter_pair[0] = playfair_grid[row_1][column_2];
+        letter_pair[1] = playfair_grid[row_2][column_1];
+    }
+
+    return;
+}
+
 static void encrypt(FILE *fp) {
     char letter_pair[3] = {0, 0, 0};
     int i = 0;
     int c;
-    while ( 1 ) {
-        c = fgetc(fp);
-        if ( c == EOF && i == 0)
-                break;
-        if ( c != EOF && !isalpha(c) )
+    while ( ( c = fgetc(fp) ) != EOF ) {
+        if ( !isalpha(c) )
             continue;
 
-        letter_pair[i++] = ( c != EOF )              ? toupper(c)
-                         : ( letter_pair[0] != 'X' ) ? 'X'
-                         :                             'Q';
+        letter_pair[i++] = toupper(c);
 
         if ( i < 2 )
             continue;
@@ -187,48 +225,9 @@ static void encrypt(FILE *fp) {
             double_pair = letter_pair[0];
         }
 
-        int row_1, column_1,
-            row_2, column_2;
-        row_1 = row_2 = -1;
-
-        for (int x = 0; x < 5; x++) {
-            for (int y = 0; y < 5; y++) {
-                if ( playfair_grid[x][y] == letter_pair[0] ) {
-                    row_1 = x;
-                    column_1 = y;
-                }
-                if ( playfair_grid[x][y] == letter_pair[1] ) {
-                    row_2 = x;
-                    column_2 = y;
-                }
-
-                if (row_1 != -1 && row_2 != -1)
-                    goto END_LOOP;
-            }
-        }
-        END_LOOP:; /* ; meant to be here. So I can break out of the inner loop */
-
-        if ( row_1 == row_2 ) {
-            /* Rule 3 --- shift to the right in the grid */
-            letter_pair[0] = playfair_grid[row_1][(column_1 + 1) % 5];
-            letter_pair[1] = playfair_grid[row_2][(column_2 + 1) % 5];
-        } else if ( column_1 == column_2 ) {
-            /* Rule 4 --- shift downwards in the grid */
-            letter_pair[0] = playfair_grid[(row_1 + 1) % 5][column_1];
-            letter_pair[1] = playfair_grid[(row_2 + 1) % 5][column_2];
-        } else {
-            /*
-             * Rule 5 --- swap to different corners of the rectangle
-             * that the letters are in
-             */
-            letter_pair[0] = playfair_grid[row_1][column_2];
-            letter_pair[1] = playfair_grid[row_2][column_1];
-        }
+        encrypt_letters(letter_pair);
 
         printf("%s", letter_pair);
-
-        if ( c == EOF )
-            break;
 
         /*
          * Resetting the letter pair because the one
@@ -242,6 +241,16 @@ static void encrypt(FILE *fp) {
         } else {
             i = 0;
         }
+    }
+
+    /*
+     * If there is an odd number of letters in the plain text
+     * add an extra one and encrypt
+     */
+    if ( i != 0 ) {
+        letter_pair[1] = (letter_pair[0] != 'X')? 'X' : 'Q';
+        encrypt_letters(letter_pair);
+        printf("%s", letter_pair);
     }
 }
 
