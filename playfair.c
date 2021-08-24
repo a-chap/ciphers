@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 
     fill_in_playfair_grid(argv[optind]);
 
-    print_playfair_grid();
+    /* print_playfair_grid(); */
 
     if ( optind + 1 == argc ) {
         encrypt(stdin);
@@ -100,7 +100,7 @@ static int valid_keyword(char *keyword) {
     return 1;
 }
 
-static inline void fill_in_playfair_grid(char *keyword) {
+static void fill_in_playfair_grid(char *keyword) {
     /* nth bit will be the nth letter of the alphabet */
     int32_t used_letters = 0;
     int n_spaces_filled = 0;
@@ -108,7 +108,8 @@ static inline void fill_in_playfair_grid(char *keyword) {
     for (int i = 0; i < strlen(keyword); i++) {
         int letter = toupper(keyword[i]);
 
-        /* There are only 25 spaces in the Playfair
+        /*
+         * There are only 25 spaces in the Playfair
          * Grid but 26 letters of the alphabet so
          * one of the spaces has to be used twice.
          * Thus I doubles up as J.
@@ -155,9 +156,92 @@ static void print_playfair_grid() {
 }
 
 static void encrypt(FILE *fp) {
-    int c, i = 0;
-    while ( ( c = fgetc(fp) ) != EOF ) {
-        printf("%c", c);
+    char letter_pair[3] = {0, 0, 0};
+    int i = 0;
+    int c;
+    while ( 1 ) {
+        c = fgetc(fp);
+        if ( c == EOF && i == 0)
+                break;
+        if ( c != EOF && !isalpha(c) )
+            continue;
+
+        letter_pair[i++] = ( c != EOF )              ? toupper(c)
+                         : ( letter_pair[0] != 'X' ) ? 'X'
+                         :                             'Q';
+
+        if ( i < 2 )
+            continue;
+
+        /*
+         * Rule 2 for Playfair --- duplicate
+         * letters have a low frequency letter
+         * put between them.
+         */
+        int double_pair = 0;
+        if ( letter_pair[0] == letter_pair[1] ) {
+            if ( letter_pair[0] != 'X' )
+                letter_pair[1] = 'X';
+            else
+                letter_pair[1] = 'Q';
+            double_pair = letter_pair[0];
+        }
+
+        int row_1, column_1,
+            row_2, column_2;
+        row_1 = row_2 = -1;
+
+        for (int x = 0; x < 5; x++) {
+            for (int y = 0; y < 5; y++) {
+                if ( playfair_grid[x][y] == letter_pair[0] ) {
+                    row_1 = x;
+                    column_1 = y;
+                }
+                if ( playfair_grid[x][y] == letter_pair[1] ) {
+                    row_2 = x;
+                    column_2 = y;
+                }
+
+                if (row_1 != -1 && row_2 != -1)
+                    goto END_LOOP;
+            }
+        }
+        END_LOOP:; /* ; meant to be here. So I can break out of the inner loop */
+
+        if ( row_1 == row_2 ) {
+            /* Rule 3 --- shift to the right in the grid */
+            letter_pair[0] = playfair_grid[row_1][(column_1 + 1) % 5];
+            letter_pair[1] = playfair_grid[row_2][(column_2 + 1) % 5];
+        } else if ( column_1 == column_2 ) {
+            /* Rule 4 --- shift downwards in the grid */
+            letter_pair[0] = playfair_grid[(row_1 + 1) % 5][column_1];
+            letter_pair[1] = playfair_grid[(row_2 + 1) % 5][column_2];
+        } else {
+            /*
+             * Rule 5 --- swap to different corners of the rectangle
+             * that the letters are in
+             */
+            letter_pair[0] = playfair_grid[row_1][column_2];
+            letter_pair[1] = playfair_grid[row_2][column_1];
+        }
+
+        printf("%s", letter_pair);
+
+        if ( c == EOF )
+            break;
+
+        /*
+         * Resetting the letter pair because the one
+         * just handled was two of the same letter
+         * see Rule 2.
+         */
+        if ( double_pair ) {
+            i = 1;
+            letter_pair[0] = double_pair;
+            double_pair = 0;
+        } else {
+            i = 0;
+        }
     }
 }
 
@@ -242,13 +326,13 @@ static void print_help() {
            "3. If the letters of the pair are in the same row of\n"
            "   the above table, shift each letter one to the right\n"
            "   and wrap around to the beginning, if needed.\n"
-           "   Eg KE -> EY and WO -> OK in the above table.\n"
+           "   Eg LY -> AF and MG -> EH in the above table.\n"
            "4. If the letters of the pair are in the same column\n"
            "   of the above table, shift each letter one down and\n"
-           "   wrap around, if needed. Eg KR -> RF and MT -> TK in\n"
+           "   wrap around, if needed. Eg RG -> GO and CX -> KY in\n"
            "   the above table.\n"
            "5. If the letters in the above table form the corners\n"
            "   of a rectangle, swap each with the other corner in its\n"
-           "   row. Eg DI -> BG in the above table.\n"
+           "   row. Eg RS -> CO in the above table.\n"
            ,invoc_name, invoc_name);
 }
