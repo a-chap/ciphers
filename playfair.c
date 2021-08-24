@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <stdint.h>
 #include <getopt.h>
 
 static char *prog_name = "playfair";
@@ -16,10 +18,14 @@ static struct option options[] = {
 };
 
 static char *keyword = NULL;
+static int playfair_grid[5][5];
 
 static void print_version();
 static void print_help();
 
+static int valid_keyword(char *keyword);
+static void fill_in_playfair_grid(char *keyword);
+static void print_playfair_grid();
 static void encrypt(FILE *fp);
 
 int main(int argc, char **argv) {
@@ -53,9 +59,16 @@ int main(int argc, char **argv) {
                         "Try '%s --help' for more information.\n"
                         , invoc_name, invoc_name);
         exit(EXIT_FAILURE);
+    } else if ( !valid_keyword(argv[optind]) ) {
+        fprintf(stderr, "%s: Keyword must consist only of letters.\n"
+                        "Try '%s --help' for more information.\n"
+                        , invoc_name, invoc_name);
+        exit(EXIT_FAILURE);
     }
 
-    keyword = argv[optind];
+    fill_in_playfair_grid(argv[optind]);
+
+    print_playfair_grid();
 
     if ( optind + 1 == argc ) {
         encrypt(stdin);
@@ -74,6 +87,71 @@ int main(int argc, char **argv) {
     }
 
     return 0;
+}
+
+static int valid_keyword(char *keyword) {
+    if ( keyword == NULL || strlen(keyword) == 0 )
+        return 0;
+
+    for (int i = 0; i < strlen(keyword); i++)
+        if ( !isalpha(keyword[i]) )
+            return 0;
+
+    return 1;
+}
+
+static inline void fill_in_playfair_grid(char *keyword) {
+    /* nth bit will be the nth letter of the alphabet */
+    int32_t used_letters = 0;
+    int n_spaces_filled = 0;
+
+    for (int i = 0; i < strlen(keyword); i++) {
+        int letter = toupper(keyword[i]);
+
+        /* There are only 25 spaces in the Playfair
+         * Grid but 26 letters of the alphabet so
+         * one of the spaces has to be used twice.
+         * Thus I doubles up as J.
+         */
+        if (letter == 'j')
+            letter = 'i';
+
+        /* if letter is already in grid skip */
+        if (used_letters & (1 << letter - 'A'))
+            continue;
+        else
+            used_letters |= (1 << letter - 'A');
+
+        playfair_grid[n_spaces_filled / 5][n_spaces_filled % 5] = letter;
+
+        n_spaces_filled++;
+    }
+
+    /* Fill in any remaining spaces of the grid. */
+    for (int i = 0; i < 26; i++) {
+        if ( n_spaces_filled == 25 )
+            break;
+        if ( i == 'J' - 'A' ) /* Skip J because I has its place */
+            continue;
+        if ( used_letters & (1 << i) )
+            continue;
+
+        playfair_grid[n_spaces_filled / 5][n_spaces_filled % 5] = i + 'A';
+        n_spaces_filled++;
+    }
+
+    return;
+}
+
+static void print_playfair_grid() {
+    for (int i = 0; i < 5; i++) {
+        printf("+---+---+---+---+---+\n");
+        for (int j = 0; j < 5; j++) {
+            printf("| %c ", playfair_grid[i][j]);
+        }
+        printf("|\n");
+    }
+    printf("+---+---+---+---+---+\n");
 }
 
 static void encrypt(FILE *fp) {
