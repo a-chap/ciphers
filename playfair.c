@@ -209,6 +209,8 @@ static void encrypt(FILE *fp) {
     while ( ( c = fgetc(fp) ) != EOF ) {
         if ( !isalpha(c) )
             continue;
+        if ( c == 'j' || c == 'J' )
+            c = 'I';
 
         letter_pair[i++] = toupper(c);
 
