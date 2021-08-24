@@ -11,7 +11,7 @@ static char *invoc_name = NULL;
 static char *author = "a-chap";
 
 static struct option options[] = {
-    { "keyword", required_argument, NULL, 'k'},
+    { "decrypt", no_argument, NULL, 'd'},
     { "help", no_argument, NULL, 'h'},
     { "version", no_argument, NULL, 'v'},
     { NULL, 0, NULL, 0 }
@@ -19,6 +19,7 @@ static struct option options[] = {
 
 static char *keyword = NULL;
 static int playfair_grid[5][5];
+static int decrypt = 0;
 
 static void print_version();
 static void print_help();
@@ -33,8 +34,11 @@ int main(int argc, char **argv) {
     invoc_name = argv[0];
 
     int c;
-    while ((c = getopt_long(argc, argv, "hv", options, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "dhv", options, NULL)) != -1) {
         switch(c) {
+            case 'd':
+                decrypt = 1;
+                break;
             case 'h':
                 print_help();
                 exit(EXIT_SUCCESS);
@@ -180,12 +184,12 @@ static void encrypt_letters(char *letter_pair) {
 
     if ( row_1 == row_2 ) {
         /* Rule 3 --- shift to the right in the grid */
-        letter_pair[0] = playfair_grid[row_1][(column_1 + 1) % 5];
-        letter_pair[1] = playfair_grid[row_2][(column_2 + 1) % 5];
+        letter_pair[0] = playfair_grid[row_1][(column_1 + (decrypt? 4 : 1)) % 5];
+        letter_pair[1] = playfair_grid[row_2][(column_2 + (decrypt? 4 : 1)) % 5];
     } else if ( column_1 == column_2 ) {
         /* Rule 4 --- shift downwards in the grid */
-        letter_pair[0] = playfair_grid[(row_1 + 1) % 5][column_1];
-        letter_pair[1] = playfair_grid[(row_2 + 1) % 5][column_2];
+        letter_pair[0] = playfair_grid[(row_1 + (decrypt? 4 : 1)) % 5][column_1];
+        letter_pair[1] = playfair_grid[(row_2 + (decrypt? 4 : 1)) % 5][column_2];
     } else {
         /*
          * Rule 5 --- swap to different corners of the rectangle
@@ -262,7 +266,7 @@ static void print_version() {
 }
 
 static void print_help() {
-    printf("Usage: %s KEYWORD [FILE]...\n"
+    printf("Usage: %s [OPTION] KEYWORD [FILE]...\n"
            "   or: %s [OPTION]\n"
            "\n"
            "Encrypts stdin or FILEs using the Playfair cipher.\n"
@@ -270,6 +274,12 @@ static void print_help() {
            "Options\n"
            "=======\n"
            "\n"
+           "    -d, --decrypt   decrypt the given message. This won't\n"
+           "                    take out any extra letters or revert\n"
+           "                    any I to a J regardless of whether it\n"
+           "                    should be done. You'll have to use your\n"
+           "                    own judgement on those and any non-letters\n"
+           "                    and capitalisation.\n"
            "    -h, --help      display this help and exit.\n"
            "    -v, --version   display version information and exit.\n"
            "\n"
