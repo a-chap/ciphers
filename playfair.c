@@ -17,7 +17,6 @@ static struct option options[] = {
     { NULL, 0, NULL, 0 }
 };
 
-static char *keyword = NULL;
 static int playfair_grid[5][5];
 static int decrypt = 0;
 
@@ -26,7 +25,6 @@ static void print_help();
 
 static int valid_keyword(char *keyword);
 static void fill_in_playfair_grid(char *keyword);
-static void print_playfair_grid();
 static void encrypt_letters(char *letter_pair);
 static void encrypt(FILE *fp);
 
@@ -123,10 +121,10 @@ static void fill_in_playfair_grid(char *keyword) {
             letter = 'i';
 
         /* if letter is already in grid skip */
-        if (used_letters & (1 << letter - 'A'))
+        if ( used_letters & ( 1 << (letter - 'A') ) )
             continue;
         else
-            used_letters |= (1 << letter - 'A');
+            used_letters |= ( 1 << (letter - 'A') );
 
         playfair_grid[n_spaces_filled / 5][n_spaces_filled % 5] = letter;
 
@@ -147,17 +145,6 @@ static void fill_in_playfair_grid(char *keyword) {
     }
 
     return;
-}
-
-static void print_playfair_grid() {
-    for (int i = 0; i < 5; i++) {
-        printf("+---+---+---+---+---+\n");
-        for (int j = 0; j < 5; j++) {
-            printf("| %c ", playfair_grid[i][j]);
-        }
-        printf("|\n");
-    }
-    printf("+---+---+---+---+---+\n");
 }
 
 static void encrypt_letters(char *letter_pair) {

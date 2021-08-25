@@ -19,7 +19,6 @@ static char *keyword = NULL;
 static void print_version();
 static void print_help();
 
-static int valid_keyword(char *keyword);
 static void encrypt(FILE *fp);
 
 int main(int argc, char **argv) {
