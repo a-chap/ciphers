@@ -12,6 +12,8 @@ static char *author = "a-chap";
 static struct option options[] = {
     { "shift", required_argument, NULL, 's'},
     { "keyword", required_argument, NULL, 'k'},
+    { "alphabet", no_argument, NULL, 'a'},
+    { "backwards_alphabet", no_argument, NULL, 'z'},
     { "progress", no_argument, NULL, 'p'},
     { "rot13", no_argument, NULL, 'r'},
     { "decrypt", no_argument, NULL, 'd'},
@@ -42,12 +44,28 @@ int main(int argc, char **argv) {
     invoc_name = argv[0];
 
     int c, decrypt = 0, tmp_shift;
-    while ((c = getopt_long(argc, argv, "s:k:prdhv", options, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "s:k:azprdhv", options, NULL)) != -1) {
         switch(c) {
             case 's':
                 tmp_shift = atoi(optarg);
                 if ( tmp_shift >= 0 && tmp_shift <= 26 )
                     shift = tmp_shift;
+                break;
+            case 'a': case 'z':
+                if ( keyword != NULL ) {
+                                fprintf(stderr, "%s: Only one keyword needed.\n", invoc_name);
+                                fprintf(stderr, "Try '%s --help' for more information.\n", invoc_name);
+                                exit(EXIT_FAILURE);
+                }
+                keyword = calloc(26, sizeof(int));
+                if ( keyword == NULL ) {
+                    perror("");
+                    exit(EXIT_FAILURE);
+                }
+                keyword_length = 26;
+                for (int i = 0; i < 26; i++) {
+                    keyword[i] = (c == 'a')? i : 25 - i;
+                }
                 break;
             case 'k':
                 if ( keyword != NULL ) {
@@ -169,6 +187,8 @@ static void print_help() {
            "\n"
            "    -s, --shift NUMBER  set how many letters to shift the plain text by.\n"
            "    -k, --keyword WORD  set the keyword to use a Vigenere cipher.\n"
+           "    -a, --alphabet  use the alphabet as the keyword for the Vigenere cipher.\n"
+           "    -z, --backwards_alphabet  use the alphabet but backwards as the keyword for the Vigenere cipher.\n"
            "    -p, --progress  progress the keyword as encryption continues.\n"
            "                    ie keyword becomes lfzxpse for the second set.\n"
            "                    of seven letters and then mgayqtf for the third\n"
