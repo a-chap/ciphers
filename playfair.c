@@ -71,8 +71,6 @@ int main(int argc, char **argv) {
 
     fill_in_playfair_grid(argv[optind]);
 
-    /* print_playfair_grid(); */
-
     if ( optind + 1 == argc ) {
         encrypt(stdin);
     } else {
@@ -117,8 +115,8 @@ static void fill_in_playfair_grid(char *keyword) {
          * one of the spaces has to be used twice.
          * Thus I doubles up as J.
          */
-        if (letter == 'j')
-            letter = 'i';
+        if (letter == 'J')
+            letter = 'I';
 
         /* if letter is already in grid skip */
         if ( used_letters & ( 1 << (letter - 'A') ) )
