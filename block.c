@@ -16,27 +16,15 @@ static struct option options[] = {
     { NULL, 0, NULL, 0 }
 };
 
-static int block_size = 5;
-static int block_group_size = 0;
-
-static int char_pos = 0;
-static int block_num = 0;
-
-static inline int isnt_first_char() { return char_pos; }
-static inline int is_beginning_of_block() {
-    return char_pos % block_size == 0;
-}
-static inline int group_blocks_into_lines() { return block_group_size; }
-static inline int is_end_of_block_line() {
-    return block_num == block_group_size;
-}
-
 static void print_version();
 static void print_help();
 
-static void block_file(FILE *fp);
+static void block_file(FILE *fp, int block_size, int nblocks);
 
 int main(int argc, char **argv) {
+    int block_size = 5;
+    int nblock_line = 0;
+
     invoc_name = argv[0];
 
     int c;
@@ -48,9 +36,9 @@ int main(int argc, char **argv) {
                     block_size = 5;
                 break;
             case 'n':
-                block_group_size = atoi(optarg);
-                if ( block_group_size < 0 )
-                    block_group_size = 0;
+                nblock_line = atoi(optarg);
+                if ( nblock_line < 0 )
+                    nblock_line = 0;
                 break;
             case 'h':
                 print_help();
@@ -68,16 +56,16 @@ int main(int argc, char **argv) {
     }
 
     if ( optind == argc ) {
-        block_file(stdin);
+        block_file(stdin, block_size, nblock_line);
     } else {
         for (int n = optind; n < argc; n++) {
             FILE *fp = fopen(argv[n], "r");
             if ( fp == NULL ) {
-                perror("Cannot open file");
+                perror(invoc_name);
                 continue;
             }
 
-            block_file(fp);
+            block_file(fp, block_size, nblock_line);
 
             fclose(fp);
         }
@@ -86,18 +74,20 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-static void block_file(FILE *fp) {
+static void block_file(FILE *fp, int block_size, int nblocks) {
+    static int char_pos = 0;
+    static int block_num = 0;
     int c;
     while ( ( c = fgetc(fp) ) != EOF ) {
         if ( !isprint(c) || isspace(c) )
             continue;
-        if ( isnt_first_char() && is_beginning_of_block() ) {
-            if ( group_blocks_into_lines() )
+        if ( char_pos && char_pos % block_size == 0 ) {
+            if ( nblocks )
                 block_num++;
 
-            if ( group_blocks_into_lines() && is_end_of_block_line() ) {
+            if ( nblocks && block_num == nblocks ) {
                 printf("\n");
-                block_num %= block_group_size;
+                block_num = 0;
             } else
                 printf(" ");
 
