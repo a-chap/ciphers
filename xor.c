@@ -14,14 +14,13 @@ static struct option options[] = {
     { NULL, 0, NULL, 0 }
 };
 
-static char *keyword = NULL;
-
 static void print_version();
 static void print_help();
 
-static void encrypt(FILE *fp);
+static void encrypt(FILE *fp, char *keyword);
 
 int main(int argc, char **argv) {
+    char *keyword = NULL;
     invoc_name = argv[0];
 
     int c;
@@ -57,16 +56,17 @@ int main(int argc, char **argv) {
     keyword = argv[optind];
 
     if ( optind + 1 == argc ) {
-        encrypt(stdin);
+        encrypt(stdin, keyword);
     } else {
         for (int i = optind + 1; i < argc; i++) {
             FILE *fp = fopen(argv[i], "r");
             if ( fp == NULL ) {
-                perror("Cannot open file");
+                fprintf(stderr, "%s: ", argv[i]);
+                perror(argv[i]);
                 continue;
             }
 
-            encrypt(fp);
+            encrypt(fp, keyword);
 
             fclose(fp);
         }
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-static void encrypt(FILE *fp) {
+static void encrypt(FILE *fp, char *keyword) {
     int c, i = 0;
     while ( ( c = fgetc(fp) ) != EOF ) {
         c ^= keyword[i];

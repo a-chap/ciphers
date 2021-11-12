@@ -14,7 +14,7 @@ static struct option options[] = {
     { "shift", required_argument, NULL, 's'},
     { "keyword", required_argument, NULL, 'k'},
     { "alphabet", no_argument, NULL, 'a'},
-    { "reverse-alphabet", no_argument, NULL, 'z'},
+    { "backwards-alphabet", no_argument, NULL, 'z'},
     { "progress", no_argument, NULL, 'p'},
     { "atbash", no_argument, NULL, 'b'},
     { "caesar", no_argument, NULL, 'c'},
@@ -25,20 +25,20 @@ static struct option options[] = {
     { NULL, 0, NULL, 0 }
 };
 
-static int multiplier = 1;
-static int *keyword = NULL;
-static int progress_keyword = 0;
+enum { NONE = 0, DECRYPT = 1, PROGRESS = 2, };
 
 static void print_version();
 static void print_help();
 
-static void set_shift(int shift);
+static int *set_shift(int shift);
 static int valid_keyword(char *keyword);
-static void encrypt(FILE *fp, int decrypt);
+static void encrypt(FILE *fp, int *keyword, int multiplier, int options);
 
 int main(int argc, char **argv) {
     invoc_name = argv[0];
-    int decrypt = 0;
+    int multiplier = 1;
+    int *keyword = NULL;
+    int cipher_options = NONE;
     int c;
     while ((c = getopt_long(argc, argv, "m:s:k:azpbcrdhv", options, NULL)) != -1) {
         switch(c) {
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
                                     invoc_name);
                     exit(EXIT_FAILURE);
                 }
-                set_shift(atoi(optarg));
+                keyword = set_shift(atoi(optarg));
                 if ( keyword[0] <= 0 || keyword[0] >= 26 ) {
                     fprintf(stderr, "%s: The shift needs to be a number between "
                                     "1 and 25 inclusive.\n", invoc_name);
@@ -112,20 +112,20 @@ int main(int argc, char **argv) {
 
                 break;
             case 'p':
-                progress_keyword = 1;
+                cipher_options |= PROGRESS;
                 break;
             case 'c':
-                set_shift(3);
+                keyword = set_shift(3);
                 break;
             case 'r':
-                set_shift(13);
+                keyword = set_shift(13);
                 break;
             case 'b':
                 multiplier = 25;
-                set_shift(25);
+                keyword = set_shift(25);
                 break;
             case 'd':
-                decrypt = 1;
+                cipher_options |= DECRYPT;
                 break;
             case 'h':
                 print_help();
@@ -144,19 +144,20 @@ int main(int argc, char **argv) {
     }
 
     if ( keyword == NULL )
-        set_shift(0);
+        keyword = set_shift(0);
 
     if ( optind == argc ) {
-        encrypt(stdin, decrypt);
+        encrypt(stdin, keyword, multiplier, cipher_options);
     } else {
-        for (int n = optind; n < argc; n++) {
-            FILE *fp = fopen(argv[n], "r");
+        for (int i = optind; i < argc; i++) {
+            FILE *fp = fopen(argv[i], "r");
             if ( fp == NULL ) {
-                perror(invoc_name);
+                fprintf(stderr, "%s: ", invoc_name);
+                perror(argv[i]);
                 continue;
             }
 
-            encrypt(fp, decrypt);
+            encrypt(fp, keyword, multiplier, cipher_options);
 
             fclose(fp);
         }
@@ -176,21 +177,31 @@ static int valid_keyword(char *keyword) {
     return 1;
 }
 
-static void set_shift(int shift) {
-    keyword = calloc(2,sizeof(int));
+static int *set_shift(int shift) {
+    int *keyword = calloc(2,sizeof(int));
     if ( keyword == NULL ) {
         perror(invoc_name);
         exit(EXIT_FAILURE);
     }
     keyword[0] = shift;
     keyword[1] = -1;
+    return keyword;
 }
 
-static void encrypt(FILE *fp, int decrypt) {
-    int c, i = 0;
+static void encrypt(FILE *fp, int *keyword, int multiplier, int options) {
+    static int i = 0;
+    int decrypt = options & DECRYPT;
+    int progress_keyword = options & PROGRESS;
     int first_letter;
+    int c;
 
-    if ( decrypt ) {
+    if ( decrypt && multiplier != 1) {
+        /* Can't divide with modular arithmetic,
+         * the inverse of multiplication is multiplication
+         * a a^{-1} = 1 (mod 26)
+         * When solved gives the inverse a^{-1} of multiplication
+         * by a.
+         */
         int inverse_multipliers[26] = {
              [3]  =  9, [5]  = 21, [7]  = 15, [9]  =  3,
              [11] = 19, [15] =  7, [17] = 23, [19] = 11,
@@ -248,7 +259,7 @@ static void print_help() {
            "                             The letters have the values a = 0, b = 1, ... z = 25.\n"
            "    -k, --keyword WORD  set the keyword to use a Vigenere cipher.\n"
            "    -a, --alphabet  use the alphabet as the keyword for the Vigenere cipher.\n"
-           "    -z, --backwards_alphabet  use the alphabet but backwards as the keyword for the Vigenere cipher.\n"
+           "    -z, --backwards-alphabet  use the alphabet but backwards as the keyword for the Vigenere cipher.\n"
            "    -p, --progress  progress the keyword as encryption continues.\n"
            "                    ie keyword becomes lfzxpse for the second set.\n"
            "                    of seven letters and then mgayqtf for the third\n"

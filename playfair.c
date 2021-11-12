@@ -11,6 +11,7 @@ static char *invoc_name = NULL;
 static char *author = "a-chap";
 
 static struct option options[] = {
+    { "progress", no_argument, NULL, 'p'},
     { "decrypt", no_argument, NULL, 'd'},
     { "help", no_argument, NULL, 'h'},
     { "version", no_argument, NULL, 'v'},
@@ -18,6 +19,7 @@ static struct option options[] = {
 };
 
 static int playfair_grid[5][5];
+static int progress_keyword = 0;
 static int decrypt = 0;
 
 static void print_version();
@@ -25,6 +27,8 @@ static void print_help();
 
 static int valid_keyword(char *keyword);
 static void fill_in_playfair_grid(char *keyword);
+static void progress_grid();
+static void print_playfair_grid();
 static void encrypt_letters(char *letter_pair);
 static void encrypt(FILE *fp);
 
@@ -32,8 +36,11 @@ int main(int argc, char **argv) {
     invoc_name = argv[0];
 
     int c;
-    while ((c = getopt_long(argc, argv, "dhv", options, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "pdhv", options, NULL)) != -1) {
         switch(c) {
+            case 'p':
+                progress_keyword = 1;
+                break;
             case 'd':
                 decrypt = 1;
                 break;
@@ -77,7 +84,8 @@ int main(int argc, char **argv) {
         for (int i = optind + 1; i < argc; i++) {
             FILE *fp = fopen(argv[i], "r");
             if ( fp == NULL ) {
-                perror("Cannot open file");
+                fprintf(stderr, "%s: ", invoc_name);
+                perror(argv[i]);
                 continue;
             }
 
@@ -99,6 +107,30 @@ static int valid_keyword(char *keyword) {
             return 0;
 
     return 1;
+}
+
+static void progress_grid() {
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+            if ( playfair_grid[i][j] == 'Z' )
+                playfair_grid[i][j] = 'A';
+            else if ( playfair_grid[i][j] == 'I' )
+                playfair_grid[i][j] = 'K';
+            else
+                playfair_grid[i][j]++;
+        }
+    }
+}
+
+static void print_playfair_grid() {
+    for (int i = 0; i < 5; i++) {
+        printf("+---+---+---+---+---+\n");
+        for (int j = 0; j < 5; j++) {
+            printf("| %c ", playfair_grid[i][j]);
+        }
+        puts("|");
+    }
+    printf("+---+---+---+---+---+\n");
 }
 
 static void fill_in_playfair_grid(char *keyword) {
@@ -188,7 +220,7 @@ static void encrypt_letters(char *letter_pair) {
 }
 
 static void encrypt(FILE *fp) {
-    char letter_pair[3] = {0, 0, 0};
+    char letter_pair[2] = {0, 0};
     int i = 0;
     int c;
     while ( ( c = fgetc(fp) ) != EOF ) {
@@ -207,16 +239,19 @@ static void encrypt(FILE *fp) {
          * letters have a low frequency letter
          * put between them.
          */
-        int double_pair = 0;
+        int double_letter = 0;
         if ( letter_pair[0] == letter_pair[1] ) {
             if ( letter_pair[0] != 'X' )
                 letter_pair[1] = 'X';
             else
                 letter_pair[1] = 'Q';
-            double_pair = letter_pair[0];
+            double_letter = letter_pair[0];
         }
 
         encrypt_letters(letter_pair);
+
+        if ( progress_keyword )
+            progress_grid();
 
         printf("%s", letter_pair);
 
@@ -225,10 +260,10 @@ static void encrypt(FILE *fp) {
          * just handled was two of the same letter
          * see Rule 2.
          */
-        if ( double_pair ) {
+        if ( double_letter ) {
             i = 1;
-            letter_pair[0] = double_pair;
-            double_pair = 0;
+            letter_pair[0] = double_letter;
+            double_letter = 0;
         } else {
             i = 0;
         }

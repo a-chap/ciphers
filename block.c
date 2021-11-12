@@ -58,10 +58,11 @@ int main(int argc, char **argv) {
     if ( optind == argc ) {
         block_file(stdin, block_size, nblock_line);
     } else {
-        for (int n = optind; n < argc; n++) {
-            FILE *fp = fopen(argv[n], "r");
+        for (int i = optind; i < argc; i++) {
+            FILE *fp = fopen(argv[i], "r");
             if ( fp == NULL ) {
-                perror(invoc_name);
+                fprintf(stderr, "%s: ", invoc_name);
+                perror(argv[i]);
                 continue;
             }
 
